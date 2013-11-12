@@ -222,14 +222,18 @@ select distinct x.authorid as id1, y.authorid as id2
 from topauthored x, topauthored y
 where x.pubid = y.pubid and x.authorid != y.authorid;
 
-alter table topauthor add column AI numeric, add column DB numeric, add column GV numeric, add column HA numeric, add column HCI numeric, add column ML numeric, add column NC numeric, add column PL numeric, add column TH numeric;
+
+
 
 --Finds areas of authors as percentages
-select a.authorid, replace(replace(au.name, ' ', '_'), '.', ''), c.area, count(*) count, (count(*))/sum(count(*)) over (partition by a.authorid) from topaY as a, topauthor as au, inproceedings as i, topY as c where au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by au.name, c.area;
+select a.authorid, replace(au.name, ' ', '_'), c.area, count(*) count, (count(*))/sum(count(*)) over (partition by a.authorid) from topaY as a, topauthor as au, inproceedings as i, topY as c where au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by au.name, c.area;
 
-select a.authorid, au.name, replace(replace(au.name, ' ', '_'), '.', ''), c.area, count(*) count from topaY as a, topauthor as au, inproceedings as i, topY as c where au.name like 'Sudeep_Sarkar' and au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by c.area;
+--Find areas of authors as percentage removing out those contributing <= 5 percent
+select temp.authorid, temp.name2, temp.area, temp.count, (temp.count)/sum(temp.count) over (partition by temp.authorid) percent2 from (
+select a.authorid, au.name, replace(au.name, ' ', '_') name2, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by a.authorid) percent from topaY as a, topauthor as au, inproceedings as i, topY as c where au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by c.area) as temp
+where percent > 0.05;
 
-
+--create tables where top single conference
 create temporary table topY as (select a.area, a.booktitle from conferences a where booktitle in (select i.booktitle from inproceedings i, conferences c where i.booktitle=c.booktitle and c.area=a.area group by i.booktitle order by count(*) desc limit 1) order by a.area);
 
 select count(distinct(au.authorid)) from authored au, inproceedings i, topY c where au.pubid = i.pubid and i.booktitle = c.booktitle;
@@ -238,17 +242,39 @@ select count(distinct(a.name)) from author a, authored au, inproceedings i, topY
 
 create temporary table topaY as (select au.authorid, i.pubid from authored au, inproceedings i, topY c where au.pubid = i.pubid and i.booktitle = c.booktitle);
 
-
 create temporary table topcoY as
-select distinct replace(replace(a.name, ' ', '_'), '.', '') as id1, replace(replace(b.name, ' ', '_'), '.', '') as id2
-from topaY x, author a, topaY y, author b
-where x.authorid = a.authorid and y.authorid = b.authorid and x.pubid = y.pubid and x.authorid != y.authorid;
+select distinct replace(x.name, ' ', '_') as id1, replace(y.name, ' ', '_') as id2
+from topaY x, topaY y
+where x.pubid = y.pubid and x.authorid != y.authorid;
 
+--find authors who have published in multiple areas (a is authored table)
 
-select a.authorid, replace(replace(au.name, ' ', '_'), '.', ''), c.area, count(*) count, (count(*))/sum(count(*)) over (partition by a.authorid) from topaY as a, topauthor as au, inproceedings as i, topY as c where au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by au.name, c.area;
+select temp.authorid, count(*) from (select a.authorid, au.name, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by a.authorid) count2 from topaX as a, topauthor as au, inproceedings as i, topX as c where au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by au.name, c.area) temp group by temp.authorid having count(*) > 1;
 
-select temp.authorid, temp.name2, temp.area, temp.count, (temp.count)/sum(temp.count) over (partition by temp.authorid) percent2 from (
-select a.authorid, au.name, replace(replace(au.name, ' ', '_'), '.', '') name2, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by a.authorid) percent from topaY as a, topauthor as au, inproceedings as i, topY as c where au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by c.area) as temp
-where percent > 0.05;
+--choose 1,000 random authors from each area
+create temporary table topaY as
+(select temp.authorid, temp.name, temp.pubid from (
+    select a.authorid, a.name, au.pubid, c.area, row_number() over (partition by c.area order by random()) rn from topauthor a, topauthored au, inproceedings i, topX c where a.authorid = au.authorid and au.pubid = i.pubid and i.booktitle = c.booktitle) temp
+where rn <= 1000);
+
+--coauthor table from 1,000 random articles from each area
+(with pubs as
+(select a.authorid, temp.pubid, temp.area from (
+    select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, conferences c where i.booktitle = c.booktitle) temp, authored a where temp.pubid = a.pubid and rn <= 500)
+select distinct cast(x.authorid as text)||'_'||x.area as a1, cast(y.authorid as text)||'_'||y.area as a2, x.area from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid);
+
+--count number of authors in each area when finding coauthorships from 1,000 random articles from each area
+(with pubs as
+(select a.authorid, temp.pubid, temp.area from (
+    select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, conferences c where i.booktitle = c.booktitle) temp, authored a where temp.pubid = a.pubid and rn <= 500)
+select count(*), temp.area from 
+(select distinct cast(x.authorid as text)||'_'||x.area as a1, cast(y.authorid as text)||'_'||y.area as a2, x.area from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid) as temp group by temp.area);
+
+--select 1000 coauthorships from each area
+copy
+(select cast(temp.id1 as text)||'_'||temp.area, cast(temp.id2 as text)||'_'||temp.area from (
+    select distinct a.authorid id1, b.authorid id2, c.area, row_number() over (partition by c.area order by random()) rn from authored a, authored b, inproceedings i, conferences c where a.pubid = b.pubid and a.authorid != b.authorid and b.pubid = i.pubid and i.booktitle = c.booktitle) temp where rn <= 1000)
+to '/tmp/norm_co.txt' with delimiter ' ';
+
 
 
