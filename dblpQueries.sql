@@ -14,7 +14,7 @@ order by temp.title desc;
 
 --COUNTING # AUTHORS
 select count(distinct(au.authorid)) from authored au, inproceedings i where au.pubid = i.pubid and i.booktitle like 'Mobile HCI';
-      
+
 --COUNTING # Publications
 select count(pubid) from inproceedings i where i.booktitle like 'Mobile HCI';
 
@@ -91,7 +91,7 @@ update inproceedings set booktitle = 'JICSLP' where booktitle like 'ICLP%' or bo
 --update inproceedings set booktitle = 'FSE' where pubid in (select x.pubid as pubid from Publication x join Pub y on x.pubkey = y.k and y.p = 'inproceedings' left outer join Field u on x.pubkey = u.k and u.p='booktitle' where u.v like 'FSE' or u.v like '%SIGSOFT FSE%' group by x.pubid);
 
 create table conferences (booktitle text, area varchar(10));
-insert into conferences values ('POPL', 'PL'),  ('PLDI', 'PL'),  ('OOPSLA', 'PL'),  ('ICFP', 'PL'),  ('JICSLP', 'PL'),  ('ICSE', 'PL'),  ('FSE', 'PL'),  ('CAV', 'PL');
+insert into conferences values ('POPL', 'PL'),('PLDI', 'PL'),('OOPSLA', 'PL'),('ICFP', 'PL'),('JICSLP', 'PL'),('ICSE', 'PL'),('FSE', 'PL'),('CAV', 'PL');
 insert into conferences values ('CHI', 'HCI'), ('Mobile HCI', 'HCI'), ('CSCW', 'HCI'), ('HUC', 'HCI'), ('UIST', 'HCI');
 insert into conferences values ('INFOCOM', 'NC'), ('MOBICOM', 'NC'), ('IPSN', 'NC'), ('SIGCOMM', 'NC'), ('ICNP', 'NC'), ('MobiHoc', 'NC');
 insert into conferences values ('ICPR', 'ML'), ('FSKD', 'ML'), ('ICML', 'ML'), ('KDD', 'ML');
@@ -107,85 +107,87 @@ cluster conferences using conferences_pkey;
 --Sanity check, should return all the article counts we have already
 select c.area, i.booktitle, count(*) as count from inproceedings i, conferences c where i.booktitle=c.booktitle group by c.area, i.booktitle order by c.area, count(*) desc;
 /*
-AI   | ICRA       | 14565
- AI   | IROS       | 10871
- AI   | AAAI       |  8014
- AI   | IJCAI      |  5925
- AI   | NIPS       |  4828
- AI   | AAMAS      |  3599
- AI   | ACL        |  3259
- AI   | UAI        |  1815
- AI   | KR         |   830
- AI   | ICGA       |   497
- DB   | ICDE       |  3989
- DB   | CIKM       |  3075
- DB   | SIGMOD     |  2903
- DB   | VLDB       |  2504
- DB   | PODS       |  1019
- DB   | ICDT       |   635
- GV   | ICIP       | 15125
- GV   | CVPR       |  5699
- GV   | ICCV       |  2828
- GV   | ECCV       |  2615
- GV   | SIGGRAPH   |  2357
- GV   | VIS        |  1254
- GV   | I3D        |   129
- GV   | CGI        |    16
- HA   | DAC        |  6075
- HA   | ICCAD      |  2812
- HA   | ISCA       |  1553
- HA   | MICRO      |   908
- HA   | FCCM       |   890
- HA   | HPCA       |   673
- HA   | ISPD       |   581
- HA   | ASPLOS     |   535
- HCI  | CHI        |  8497
- HCI  | CSCW       |  1298
- HCI  | Mobile HCI |  1077
- HCI  | HUC        |   824
- HCI  | UIST       |   761
- ML   | ICPR       |  6974
- ML   | FSKD       |  4486
- ML   | KDD        |  2261
- ML   | ICML       |  2260
- NC   | INFOCOM    |  6371
- NC   | SIGCOMM    |  1041
- NC   | IPSN       |   676
- NC   | ICNP       |   675
- NC   | MOBICOM    |   535
- NC   | MobiHoc    |   474
- PL   | ICSE       |  3789
- PL   | OOPSLA     |  2127
- PL   | JICSLP     |  1781
- PL   | FSE        |  1377
- PL   | POPL       |  1286
- PL   | CAV        |  1187
- PL   | PLDI       |   906
- PL   | ICFP       |   584
- TH   | FOCS       |  2839
- TH   | STOC       |  2786
- TH   | SODA       |  2630
- TH   | SOCG       |  1417
- TH   | ISSAC      |  1283
- TH   | LICS       |  1273
- TH   | SPAA       |  1029
- TH   | COLT       |   921
+AI | ICRA | 14565
+ AI | IROS | 10871
+ AI | AAAI |8014
+ AI | IJCAI|5925
+ AI | NIPS |4828
+ AI | AAMAS|3599
+ AI | ACL|3259
+ AI | UAI|1815
+ AI | KR | 830
+ AI | ICGA | 497
+ DB | ICDE |3989
+ DB | CIKM |3075
+ DB | SIGMOD |2903
+ DB | VLDB |2504
+ DB | PODS |1019
+ DB | ICDT | 635
+ GV | ICIP | 15125
+ GV | CVPR |5699
+ GV | ICCV |2828
+ GV | ECCV |2615
+ GV | SIGGRAPH |2357
+ GV | VIS|1254
+ GV | I3D| 129
+ GV | CGI|16
+ HA | DAC|6075
+ HA | ICCAD|2812
+ HA | ISCA |1553
+ HA | MICRO| 908
+ HA | FCCM | 890
+ HA | HPCA | 673
+ HA | ISPD | 581
+ HA | ASPLOS | 535
+ HCI| CHI|8497
+ HCI| CSCW |1298
+ HCI| Mobile HCI |1077
+ HCI| HUC| 824
+ HCI| UIST | 761
+ ML | ICPR |6974
+ ML | FSKD |4486
+ ML | KDD|2261
+ ML | ICML |2260
+ NC | INFOCOM|6371
+ NC | SIGCOMM|1041
+ NC | IPSN | 676
+ NC | ICNP | 675
+ NC | MOBICOM| 535
+ NC | MobiHoc| 474
+ PL | ICSE |3789
+ PL | OOPSLA |2127
+ PL | JICSLP |1781
+ PL | FSE|1377
+ PL | POPL |1286
+ PL | CAV|1187
+ PL | PLDI | 906
+ PL | ICFP | 584
+ TH | FOCS |2839
+ TH | STOC |2786
+ TH | SODA |2630
+ TH | SOCG |1417
+ TH | ISSAC|1283
+ TH | LICS |1273
+ TH | SPAA |1029
+ TH | COLT | 921
 */
 
 select c.area, count(distinct(au.authorid)) from authored au, inproceedings i, conferences c where au.pubid = i.pubid and i.booktitle = c.booktitle group by c.area;
 /*
-AI   | 54710
-DB   | 15921
-GV   | 33780
-HA   | 18127
-HCI  | 18131
-ML   | 26255
-NC   | 12573
-PL   | 14740
-TH   |  9407
+AI | 54710
+DB | 15921
+GV | 33780
+HA | 18127
+HCI| 18131
+ML | 26255
+NC | 12573
+PL | 14740
+TH |9407
 
 Total Unique: 168823
 */
+
+--------------------------------------------------CREATE TOP 3 CONFERENCES TABLES
 
 --top x number of conferences per area
 create table topX as (select a.area, a.booktitle from conferences a where booktitle in (select i.booktitle from inproceedings i, conferences c where i.booktitle=c.booktitle and c.area=a.area group by i.booktitle order by count(*) desc limit 3) order by a.area);
@@ -193,15 +195,15 @@ create table topX as (select a.area, a.booktitle from conferences a where bookti
 select c.area, count(distinct(au.authorid)) from authored au, inproceedings i, topX c where au.pubid = i.pubid and i.booktitle = c.booktitle group by c.area;
 
 /*
-AI   | 38728
-DB   | 13464
-GV   | 26302
-HA   | 14121
-HCI  | 15971
-ML   | 24096
-NC   | 11031
-PL   | 10038
-TH   |  4939
+AI | 38728
+DB | 13464
+GV | 26302
+HA | 14121
+HCI| 15971
+ML | 24096
+NC | 11031
+PL | 10038
+TH |4939
 
 Total Unique: 136736
 */
@@ -222,8 +224,7 @@ select distinct x.authorid as id1, y.authorid as id2
 from topauthored x, topauthored y
 where x.pubid = y.pubid and x.authorid != y.authorid;
 
-
-
+--------------------------------------------------QUERIES FOR MILESTONE
 
 --Finds areas of authors as percentages
 select a.authorid, replace(au.name, ' ', '_'), c.area, count(*) count, (count(*))/sum(count(*)) over (partition by a.authorid) from topaY as a, topauthor as au, inproceedings as i, topY as c where au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by au.name, c.area;
@@ -251,30 +252,49 @@ where x.pubid = y.pubid and x.authorid != y.authorid;
 
 select temp.authorid, count(*) from (select a.authorid, au.name, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by a.authorid) count2 from topaX as a, topauthor as au, inproceedings as i, topX as c where au.authorid = a.authorid and a.pubid = i.pubid and i.booktitle = c.booktitle group by a.authorid, au.name, c.area order by au.name, c.area) temp group by temp.authorid having count(*) > 1;
 
+--------------------------------------------------QUERIES FOR SAMPLING DATA DIFFERENTLY
+
 --choose 1,000 random authors from each area
 create temporary table topaY as
 (select temp.authorid, temp.name, temp.pubid from (
-    select a.authorid, a.name, au.pubid, c.area, row_number() over (partition by c.area order by random()) rn from topauthor a, topauthored au, inproceedings i, topX c where a.authorid = au.authorid and au.pubid = i.pubid and i.booktitle = c.booktitle) temp
+select a.authorid, a.name, au.pubid, c.area, row_number() over (partition by c.area order by random()) rn from topauthor a, topauthored au, inproceedings i, topX c where a.authorid = au.authorid and au.pubid = i.pubid and i.booktitle = c.booktitle) temp
 where rn <= 1000);
 
---coauthor table from 1,000 random articles from each area
+--number of distinct publications per area in topX
+select c.area, count(distinct(i.pubid)) from inproceedings i, topX c where i.booktitle=c.book;
+/*
+ area | count 
+------+-------
+ AI   | 33450
+ DB   |  9967
+ GV   | 23652
+ HA   | 10440
+ HCI  | 10872
+ ML   | 13721
+ NC   |  8088
+ PL   |  7697
+ TH   |  8255
+
+ This means we can select around 7500 articles for each conference
+*/
+--authors and titles from 7,500 random articles from each area; can use copy ... to in order to save as a csv file
+(select a.authorid, temp.pubid, temp.title, temp.area from (
+select i.pubid, p.title, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, publication p, topX c where i.booktitle = c.booktitle and i.pubid = p.pubid) temp, topauthored a where temp.pubid = a.pubid and rn <= 1)
+
+--coauthors from 7,500 random articles from each area
 (with pubs as
 (select a.authorid, temp.pubid, temp.area from (
-    select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, conferences c where i.booktitle = c.booktitle) temp, authored a where temp.pubid = a.pubid and rn <= 500)
+select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 7500)
 select distinct cast(x.authorid as text)||'_'||x.area as a1, cast(y.authorid as text)||'_'||y.area as a2, x.area from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid);
 
---count number of authors in each area when finding coauthorships from 1,000 random articles from each area
+--count number of authors in each area when finding coauthorships from 7500 random articles from each area
 (with pubs as
 (select a.authorid, temp.pubid, temp.area from (
-    select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, conferences c where i.booktitle = c.booktitle) temp, authored a where temp.pubid = a.pubid and rn <= 500)
+select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 7500)
 select count(*), temp.area from 
 (select distinct cast(x.authorid as text)||'_'||x.area as a1, cast(y.authorid as text)||'_'||y.area as a2, x.area from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid) as temp group by temp.area);
 
---select 1000 coauthorships from each area
-copy
-(select cast(temp.id1 as text)||'_'||temp.area, cast(temp.id2 as text)||'_'||temp.area from (
-    select distinct a.authorid id1, b.authorid id2, c.area, row_number() over (partition by c.area order by random()) rn from authored a, authored b, inproceedings i, conferences c where a.pubid = b.pubid and a.authorid != b.authorid and b.pubid = i.pubid and i.booktitle = c.booktitle) temp where rn <= 1000)
-to '/tmp/norm_co.txt' with delimiter ' ';
+
 
 
 
