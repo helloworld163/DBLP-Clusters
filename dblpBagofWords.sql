@@ -1,5 +1,4 @@
-
---top booktitles
+--get the top publications from the top conference in each area
 create temporary table topBookTitles as
 select * from conferences a
 where booktitle in (
@@ -10,8 +9,8 @@ and c.area=a.area
 group by i.booktitle order by count(*) desc 
 limit 1) order by a.area
 
-select * from topBookTitles
-
+--from the clustering results from WEKA, called "results". Tie it back to the research area and the number of publications in 
+--that area
 create temporary table countsArea as
 SELECT  r.cluster, b.area, count(*)
  FROM results r, 
@@ -24,12 +23,13 @@ SELECT  r.cluster, b.area, count(*)
 Group by cluster, area
 order by cluster asc, count(*) desc
 
-
+--For each cluster, count how many publications total
 create temporary table sumsCluster as
  select cluster, sum(count)
  FROM countsArea
  group by cluster
 
+-- Get the percentages (TBC)
 create temporary table percentages as
 select a.cluster, a.area, a.count/c.sum * 100 as percent
  from countsArea a, sumsCluster c
