@@ -29,7 +29,7 @@ create temporary table sumsCluster as
  FROM countsArea
  group by cluster
 
--- Get the percentages (TBC)
+-- Get the percentages of each cluster (each cluster will have several areas and percentages)
 create temporary table percentages as
 select a.cluster, a.area, a.count/c.sum * 100 as percent
  from countsArea a, sumsCluster c
@@ -37,7 +37,7 @@ select a.cluster, a.area, a.count/c.sum * 100 as percent
  order by cluster asc, percent  desc
 
 
---new way from percentages
+--label each cluster with a max percentage
 create temporary table maxCluster as
 select x.cluster, p.area
 from
@@ -46,11 +46,13 @@ from percentages a
 group by a.cluster) x, percentages p 
 where p.cluster = x.cluster and p.percent = x.maxP
 
+--Get the authors to classify
 create temporary table authorsToClassify as
 SELECT distinct au.authorid
 FROM TOPBOOKTITLES b, inproceedings i, authored au, rand1000Publications r
 where b.booktitle = i.booktitle and i.pubid = au.pubid and r.pubid = i.pubid
 
+--For each author, get the area and the number of publications
 create temporary table authorClusterCounts as
 select a.authorid, c.area, count(*)
 from authorsToClassify a, authored au, rand1000Publications r, maxCluster c,
@@ -60,19 +62,21 @@ and res.pubid = r.pubid
 group by a.authorid, c.area
 order by a.authorid, c.area
 
+--total number of publications per author
 create temporary table countTotalArticles as
 select a.authorid, sum(a.count)
 from authorClusterCounts a
 group by a.authorid
 order by a.authorid
 
---MINE
+--authors and percentages (MINE)
 create temporary table finalans2 as
 select distinct a.authorid, c.area, c.count, c.count/a.sum * 100 as percent
 from countTotalArticles a, authorClusterCounts c
 where a.authorid = c.authorid
 
---OTHER
+--OTHER (TRUTH)
+--sample query
 select distinct a.authorid, c.area
 FROM authorsToClassify a, authored au, inproceedings i, conferences c
 where a.authorid = au.authorid and au.pubid = i.pubid and c.booktitle = i.booktitle
@@ -91,7 +95,7 @@ where percent > 0.05;
 
 
 
-
+--now getting the right weights per author
 create temporary table weights as
  select au.authorid, r.cluster, COUNT(distinct (r.cluster))
  FROM results r, 
@@ -106,6 +110,7 @@ from weights w, percentages p
 where w.cluster = p.cluster
 order by authorid asc, weightedPercent desc
 
+--for each author get the weighted sum
 create temporary table finalans as
 select w.authorid, w.cluster, w.area, sum(weightedpercent) as percent
 from weightedPercent w
