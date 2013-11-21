@@ -261,7 +261,7 @@ select a.authorid, a.name, au.pubid, c.area, row_number() over (partition by c.a
 where rn <= 1000);
 
 --number of distinct publications per area in topX
-select c.area, count(distinct(i.pubid)) from inproceedings i, topX c where i.booktitle=c.book;
+select c.area, count(distinct(i.pubid)) from inproceedings i, topX c where i.booktitle=c.booktitle group by c.area;
 /*
  area | count 
 ------+-------
@@ -281,11 +281,11 @@ select c.area, count(distinct(i.pubid)) from inproceedings i, topX c where i.boo
 (select a.authorid, temp.pubid, temp.title, temp.area from (
 select i.pubid, p.title, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, publication p, topX c where i.booktitle = c.booktitle and i.pubid = p.pubid) temp, topauthored a where temp.pubid = a.pubid and rn <= 1)
 
---coauthors from 7,500 random articles from each area
+--coauthors from 7,500 random articles from each area; treats as an undirected edge so no duplicates; if remove distinct, there should be duplicates if published in different article together
 (with pubs as
 (select a.authorid, temp.pubid, temp.area from (
-select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 7500)
-select distinct cast(x.authorid as text)||'_'||x.area as a1, cast(y.authorid as text)||'_'||y.area as a2, x.area from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid);
+select i.pubid, c.area, row_number() over (partition by c.area) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 1)
+select distinct cast(least(x.authorid,y.authorid) as text)||'_'||x.area as a1, cast(greatest(x.authorid,y.authorid) as text)||'_'||y.area as a2 from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid);
 
 --count number of authors in each area when finding coauthorships from 7500 random articles from each area
 (with pubs as
@@ -293,6 +293,14 @@ select distinct cast(x.authorid as text)||'_'||x.area as a1, cast(y.authorid as 
 select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 7500)
 select count(*), temp.area from 
 (select distinct cast(x.authorid as text)||'_'||x.area as a1, cast(y.authorid as text)||'_'||y.area as a2, x.area from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid) as temp group by temp.area);
+
+--Finds areas of authors as percentages
+select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percentage from topauthored as au, inproceedings as i, topX as c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by au.authorid, c.area;
+
+--Finds minimum and max percentage per author
+select temp.authorid, min(percentage) min, max(percentage) max from 
+(select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percentage from topauthored as au, inproceedings as i, topX as c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by au.authorid, c.area) as temp
+group by temp.authorid;
 
 
 
