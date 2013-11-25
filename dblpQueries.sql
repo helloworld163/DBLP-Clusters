@@ -282,10 +282,12 @@ select c.area, count(distinct(i.pubid)) from inproceedings i, topX c where i.boo
 select i.pubid, p.title, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, publication p, topX c where i.booktitle = c.booktitle and i.pubid = p.pubid) temp, topauthored a where temp.pubid = a.pubid and rn <= 1)
 
 --coauthors from 7,500 random articles from each area; treats as an undirected edge so no duplicates; if remove distinct, there should be duplicates if published in different article together
+
+--RANDOMIZE WHEN DO IT ACTUALLY
 (with pubs as
 (select a.authorid, temp.pubid, temp.area from (
-select i.pubid, c.area, row_number() over (partition by c.area) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 1)
-select distinct cast(least(x.authorid,y.authorid) as text)||'_'||x.area as a1, cast(greatest(x.authorid,y.authorid) as text)||'_'||y.area as a2 from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid);
+select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 500)
+select distinct least(x.authorid,y.authorid) as a1, greatest(x.authorid,y.authorid) as a2 from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid);
 
 --count number of authors in each area when finding coauthorships from 7500 random articles from each area
 (with pubs as
@@ -301,6 +303,11 @@ select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (parti
 select temp.authorid, min(percentage) min, max(percentage) max from 
 (select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percentage from topauthored as au, inproceedings as i, topX as c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by au.authorid, c.area) as temp
 group by temp.authorid;
+
+--Outputs research area of authors of interest with threshold
+select temp.authorid, temp.area, (temp.count)/sum(temp.count) over (partition by temp.authorid) percent from (
+select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percent2 from topauthored au, inproceedings i, topX c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by c.area) as temp
+where temp.percent2 > 0.1;
 
 
 
