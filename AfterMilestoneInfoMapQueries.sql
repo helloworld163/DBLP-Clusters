@@ -219,6 +219,18 @@ select * from topAuthors7500 c where authorid=1250653;
 SELECT * FROM AUTHOR WHERE AUTHORID = 1250653
 
 
+--WEIGHTED GRAPH of AUTHORS/COAUTHORS
+create temporary table coauthorsLarge as 
+select  au.authorid as author, au2.authorid as coauthor, count(*) as weight
+from topAuthors7500 au, topX pub, inproceedings i, topAuthors7500 au2
+Where  au.pubid = i.pubid 
+and i.booktitle = pub.booktitle
+and au2.pubid = i.pubid 
+and au.authorid != au2.authorid
+group by au.authorid, au2.authorid
+
+
+
 
 
 
