@@ -283,33 +283,102 @@ select i.pubid, p.title, c.area, row_number() over (partition by c.area order by
 
 --coauthors from 7,500 random articles from each area; treats as an undirected edge so no duplicates; if remove distinct, there should be duplicates if published in different article together
 
---RANDOMIZE WHEN DO IT ACTUALLY
+create temporary table coaCluster as
 (with pubs as
 (select a.authorid, temp.pubid, temp.area from (
 select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 500)
-select distinct least(x.authorid,y.authorid) as a1, greatest(x.authorid,y.authorid) as a2 from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid);
+select distinct x.authorid as a1, y.authorid as a2 from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid);
 
---count number of authors in each area when finding coauthorships from 7500 random articles from each area
-(with pubs as
-(select a.authorid, temp.pubid, temp.area from (
-select i.pubid, c.area, row_number() over (partition by c.area order by random()) rn from inproceedings i, topX c where i.booktitle = c.booktitle) temp, topauthored a where temp.pubid = a.pubid and rn <= 7500)
-select count(*), temp.area from 
-(select distinct cast(x.authorid as text)||'_'||x.area as a1, cast(y.authorid as text)||'_'||y.area as a2, x.area from pubs x, pubs y where x.pubid = y.pubid and x.authorid != y.authorid) as temp group by temp.area);
-
---Finds areas of authors as percentages
+--finds areas of authors as percentages
 select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percentage from topauthored as au, inproceedings as i, topX as c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by au.authorid, c.area;
 
---Finds minimum and max percentage per author
+--finds minimum and max percentage per author
 select temp.authorid, min(percentage) min, max(percentage) max from 
 (select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percentage from topauthored as au, inproceedings as i, topX as c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by au.authorid, c.area) as temp
 group by temp.authorid;
 
---Outputs research area of authors of interest with threshold
-select temp.authorid, temp.area, (temp.count)/sum(temp.count) over (partition by temp.authorid) percent from (
-select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percent2 from topauthored au, inproceedings i, topX c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by c.area) as temp
-where temp.percent2 > 0.1;
+--outputs research area of authors of interest with threshold
+select temp.authorid, temp.area, (temp.count)/sum(temp.count) over (partition by temp.authorid) percent from
+(select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percent2 from topauthored au, inproceedings i, topX c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by c.area) as temp
+where temp.percent2 >= 0.2;
 
+--create weighted coauthors
+create temporary table coauthorsLarge as 
+select  au.a1 as author1, au.a2 as author2, count(*) as weight
+from coaCluster au, topauthored at1, topauthored at2
+where au.a1 = at1.authorid and au.a2 = at2.authorid and at1.pubid = at2.pubid
+group by au.a1, au.a2;
 
+--finds number of research areas authors are in using different thresholds
+select temp2.count, count(*) from
+(select temp.authorid, count(*) count from
+    (select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percent2 from topauthored au, inproceedings i, topX c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by c.area) as temp
+where temp.percent2 >= 0.25 group by temp.authorid) as temp2
+group by temp2.count order by temp2.count desc;
 
+/*
+With 0.05
+ count | count  
+-------+--------
+     7 |      1
+     6 |     43
+     5 |    133
+     4 |    575
+     3 |   2569
+     2 |  13223
+     1 | 120192
 
+With 0.1
+ count | count  
+-------+--------
+     6 |      4
+     5 |     59
+     4 |    388
+     3 |   2231
+     2 |  13016
+     1 | 121038
 
+With 0.15
+ count | count  
+-------+--------
+     5 |     13
+     4 |    151
+     3 |   1653
+     2 |  12618
+     1 | 122301
+
+With 0.2
+ count | count  
+-------+--------
+     5 |      3
+     4 |     71
+     3 |   1237
+     2 |  12203
+     1 | 123222
+
+With 0.25
+ count | count  
+-------+--------
+     4 |     36
+     3 |    835
+     2 |  11352
+     1 | 124508
+*/
+
+-- create table for conference graph which create one row for every coauthorship (including authoring with oneself) where the value is the frequency
+create temporary table tempA as 
+(select  au.a1 as author1, au.a2 as author2, i.booktitle conference, count(*) as weight
+from coaCluster au, topauthored at1, topauthored at2, inproceedings i
+where au.a1 = at1.authorid and au.a2 = at2.authorid and at1.pubid = at2.pubid and at1.pubid = i.pubid
+group by au.a1, au.a2, i.booktitle)
+union
+(select a.authorid author1, a2.authorid author2, i.booktitle conference, count(*) as weight
+from topauthored a, topauthored a2, inproceedings i
+where a.authorid in
+    (select distinct(a1) from coaCluster)
+    and a.pubid = a2.pubid and a2.pubid = i.pubid and a.authorid = a2.authorid
+group by a.authorid, a2.authorid, i.booktitle);
+
+select temp.authorid, temp.area from
+(select au.authorid, c.area, count(*) count, (count(*))/sum(count(*)) over (partition by au.authorid) percent2 from topauthored au, inproceedings i, topX c where au.pubid = i.pubid and i.booktitle = c.booktitle group by au.authorid, c.area order by c.area) as temp
+where temp.percent2 < 0.2;

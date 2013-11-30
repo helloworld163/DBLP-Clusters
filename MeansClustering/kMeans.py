@@ -2,7 +2,6 @@ from __future__ import division
 from numpy import *
 import numpy.random as random
 import numpy.linalg as linalg
-#import scipy.spatial.distance as dist
 import matplotlib.pyplot as plt
 import sklearn.metrics.pairwise as dist
 from collections import defaultdict
