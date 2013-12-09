@@ -6,7 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 /**
-This program fixes the co-author list in order from ID #1 since INFOMAP wants the nodes to start from #1
+This program fixes the co-author list in order from ID #1 since INFOMAP wants the nodes to start from #1. Also includes a parser for the MAP file
+to associate each author to the module it is assigned to
 **/
 
 namespace GRAPHFIX
@@ -129,4 +130,94 @@ namespace GRAPHFIX
 
         }
     }
+    
+     class Parser
+    {
+        static void Main(string[] args)
+        {
+            Program p = new Program();
+            p.startParse();
+        }
+
+        class Pair
+        {
+            public string m;
+            public string n;
+            public string s;
+            public Pair(string mod, string name, string score)
+            {
+                m = mod;
+                n = name;
+                s = score;
+            }
+
+            public string toStr()
+            {
+                return m + "," + n;
+            }
+        }
+
+        List<string> names = new List<string>();
+
+        public void startParse()
+        {
+            StreamReader s = new StreamReader(@"C:\Users\jortiz16\SkyDrive\MLProject\graphPAJEKWEIGHTS.map");
+            String line = String.Empty;
+            bool readThis = false;
+            StreamWriter w = new StreamWriter(@"C:\Users\jortiz16\SkyDrive\MLProject\outputMAP.txt");
+
+            List<Pair> list = new List<Pair>();
+            while ((line = s.ReadLine()) != null)
+            {
+                if (line.Contains("*Nodes") || readThis)
+                {
+                    if (readThis == false)
+                    {
+                        readThis = true;
+                    }
+                    else if (line.Contains("*Link"))
+                    {
+                        readThis = false;
+                    }
+                    else 
+                    {
+                       
+                        line = line.Replace("\"","");
+                        string[] parts = line.Split(' ');
+                        string[] mod = parts[0].Split(':');
+
+                      //  if (!names.Contains(parts[1]))
+                      //  {
+                            Pair p = new Pair(mod[0], parts[1], parts[2]);
+                            list.Add(p);
+                           // names.Add(parts[1]);
+                            w.WriteLine(p.toStr());
+                      //  }
+                        
+                    }
+                }
+            }
+
+            var dups = list.GroupBy(i => i.n).Where(g => g.Count() > 1).Select(g => g.Key);
+
+            var c = list.Select(l => l.n).Distinct().Count();
+
+
+            foreach (var d in dups)
+            {
+                Console.WriteLine(d);
+            }
+
+            Console.WriteLine(dups.Count());
+            Console.ReadLine();
+
+
+
+            var count = list.Select(l => l.n).Distinct().Count();
+
+
+            w.Flush();
+        }
+    
+    
 }
