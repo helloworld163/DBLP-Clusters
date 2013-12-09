@@ -5,6 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+/**
+This program fixes the co-author list in order from ID #1 since INFOMAP wants the nodes to start from #1
+**/
+
 namespace GRAPHFIX
 {
     class Program
