@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+/** checks for all or nothing for author research assignments**/
+
 namespace percentCheck
 {
     class Program
@@ -140,6 +142,8 @@ namespace percentCheck
                       //  {
                       //      totalWrong++;
                       //  }
+                      
+                      
                         //SILLY WAY, BUT DOING SANITY CHECK
                         if (t.v[0] == getOther.v[0] && t.v[1] == getOther.v[1] && t.v[2] == getOther.v[2] &&
                             t.v[3] == getOther.v[3] && t.v[4] == getOther.v[4] && t.v[5] == getOther.v[5] &&
