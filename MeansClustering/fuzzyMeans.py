@@ -1,3 +1,8 @@
+'''
+CSE 546 Final Project
+Fuzzy c-means method with hard labeling
+'''
+
 from __future__ import division
 from numpy import *
 import numpy.random as random
@@ -66,8 +71,11 @@ def main(path, title):
     X /= (sum(X**2, axis=1)**0.5).reshape(N,1)
     #print X
     #print any((Y>0) & (Y<0.2))
-    for m in [1.1,1.3,1.5,1.7,1.9,2.1,2.3,2.5]:
-        for k in [7,8,9,10,11,12]:
+    #for m in [1.1,1.3,1.5,1.7,1.9,2.1,2.3,2.5]:
+    for m in [1.1]:
+        interResults = []
+        intraResults = []
+        for k in [5,5,5,5,5,6,6,6,12,12,12,13,13,13,13,13]:
             st = time.time()
             #m is fuzziness factor
             print
@@ -75,6 +83,14 @@ def main(path, title):
             centers, weights = kMeansCos(X,k,m)
             print time.time() - st
             print "*********************"
+            #want min intra distance
+            intraDist = intraSumCos(X,centers,weights,k)
+            print "intraDist", intraDist, "--->", sum(intraDist)/k
+            intraResults.append(sum(intraDist)/k)
+            #want max inter distance
+            interDist = interSumCos(centers,k)
+            print "interDist", interDist, "--->", sum(interDist)/k
+            interResults.append(sum(interDist)/k)
             #tpfn is true positives with false negatives
             allOrNothingMistakes, accuracy, precision, recall, tpfn  = hardLabelEval(Y, weights, k)
             print "allOrNothingMistakes", allOrNothingMistakes, "out of", N
@@ -82,6 +98,11 @@ def main(path, title):
             print "Precision", precision, "--->", precision.dot(tpfn)/sum(tpfn)
             print "Recall", recall, "--->", recall.dot(tpfn)/sum(tpfn)
             print "TPFN", tpfn
+        print "------------------------"
+        print "m,", m
+        for i in range(len(interResults)):
+            print intraResults[i], ",", interResults[i]
+        print "------------------------"
 
 def kMeansEuc(X,k,m,centers=[]):
     N,d = X.shape
@@ -92,12 +113,11 @@ def kMeansEuc(X,k,m,centers=[]):
     new_centers = zeros([k,d])
     old_weights = ones([N,k])
     weights = zeros([N,k])
-    #stop if num_iter == 20 or if labels don't change
+    #stop if num_iter == 100 or if weights don't change a lot
     while num_iter < 100 and abs(weights-old_weights).max() > 0.01:
         num_iter += 1
         old_weights = weights.copy()
         #print "Center", centers
-        #print "centers", apply_along_axis(linalg.norm, 1, centers)
         for i in range(N):
             #print "X[i]", X[i]
             c_dist = dist.pairwise_distances(centers, X[i], metric='euclidean')
@@ -129,7 +149,7 @@ def kMeansCos(X,k,m,centers=[]):
     new_centers = zeros([k,d])
     old_weights = ones([N,k])
     weights = zeros([N,k])
-    #stop if num_iter == 20 or if labels don't change
+    #stop if num_iter == 100 or if weights don't change a lot
     while num_iter < 100 and abs(weights-old_weights).max() > 0.01:
         num_iter += 1
         old_weights = weights.copy()
@@ -137,7 +157,6 @@ def kMeansCos(X,k,m,centers=[]):
         #print "centers", apply_along_axis(linalg.norm, 1, centers)
         for i in range(N):
             #unit length so don't need to divide by lengths
-            #print "X", X[i]
             c_dist = (1 - centers.dot(X[i])).reshape(k,1)
             c_dist[c_dist < 1e-14] = 0
             #print "center_dist", c_dist
@@ -147,7 +166,6 @@ def kMeansCos(X,k,m,centers=[]):
                 weights[i][zero_index] = 1
             else:
                 temp_sum = sum(c_dist**(-1./(m-1)))
-                #print "B", (1/((c_dist**(1./(m-1)))*temp_sum)).reshape(k)
                 weights[i] = (1/((c_dist**(1./(m-1)))*temp_sum)).reshape(k)
             new_centers += (weights[i]**m).reshape(k,1)*X[i]
         #print "Weights", weights
@@ -189,6 +207,20 @@ def hardLabelEval(Y, weights, k):
         precision[j] = tp/result_j if result_j != 0 else 1
         recall[j] = tp/true_j if true_j != 0 else 1
     return allOrNothingMistakes, accuracy, precision, recall, sum(Y,axis=0)
+
+def intraSumCos(X, centers, weights, k):
+    SD = zeros(k)
+    for j in range(k):
+        #average sum distance by total weight associated with cluster j
+        SD[j] = sum(weights[:,j]*(1 - X.dot(centers[j])))/sum(weights[:,j])
+    return SD
+
+def interSumCos(centers, k):
+    SD = zeros(k)
+    for j in range(k):
+        #average pairwise distance between centroids
+        SD[j] = sum(1 - centers.dot(centers[j]))/(k-1)
+    return SD
 
 if __name__ == '__main__':
     args = sys.argv

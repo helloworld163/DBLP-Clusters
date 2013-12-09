@@ -1,3 +1,7 @@
+'''
+CSE 546 Final Project
+Takes dump from database and converts it into an input matrix used in our k-means and fuzzy c-means methods; expects data on co-conferenceships and co-authorships
+'''
 from __future__ import division
 from numpy import *
 import scipy.sparse as scipy
@@ -17,6 +21,8 @@ def main(filename):
     R = 0
     C = 0
     fac = 2
+    #file row is author1, author2, conference, total publications together
+    #if author1 = author2, this total includes those coauthored with others
     for line in f:
         #authors appear in author[0] and author[1] columns (not symmetric)
         authors = line.strip().split(',')

@@ -1,3 +1,7 @@
+'''
+CSE 546 Final Project
+Takes dump from database and converts it into an input matrix used in our k-means and fuzzy c-means methods; only expects co-authorship data
+'''
 from __future__ import division
 from numpy import *
 import scipy.sparse as scipy
